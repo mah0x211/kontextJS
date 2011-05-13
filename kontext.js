@@ -12,14 +12,17 @@ kontext.def = {
 kontext.point = {};
 kontext.point.getCursor = function( evt )
 {
-	if( evt.pageX ){
-		return { x:evt.pageX, y:evt.pageY };
+	var e = ( evt.touches ) ? evt.touches[0] : evt;
+	
+	if( e.pageX ){
+		return { x:e.pageX, y:e.pageY };
 	}
-	else {
+	else
+	{
 		var scroll = kontext.util.getDocumentScroll();
 		return {
-			x: scroll.x + evt.clientX,
-			y: scroll.y + evt.clientY
+			x: scroll.x + e.clientX,
+			y: scroll.y + e.clientY
 		};
 	}
 };
@@ -206,10 +209,31 @@ kontext.util.trackValue = function( origin, dest, msec, task, smooth, ctx )
 	}
 };
 
+kontext.util.easeIn = function( origin, dest, smooth, msec, task, ctx )
+{
+	if( origin === dest ){
+		task( dest, true, ctx );
+	}
+	else
+	{
+		var interval = setInterval( function()
+			{
+				origin += ( dest - origin ) * smooth;
+				if( Math.floor( Math.abs( dest - origin ) ) <= 1 ){
+					clearInterval( interval );
+					task( dest, true, ctx );
+				}
+				else if( task( origin, false, ctx ) ){
+					clearInterval( interval );
+					task( dest, true, ctx );
+				}
+			}, msec );
+	}
+};
 
 
-// MARK: event methods
-// MARK: public
+
+// MARK: Event
 kontext.ev = {};
 kontext.ev.addListener = function( elm, type, func, useCapture )
 {
@@ -358,7 +382,7 @@ kontext.elm.isBlockLevel = function( elm, onself )
 {
 	var rc = 0;
 	
-	if( kontext.isNodeElement( elm ) )
+	if( kontext.isNode( elm ) )
 	{
 		var tag = elm.nodeName.toLowerCase(),
 			block = /^(body|blockquote|form|noframe|script|noscript|div|fieldset|address|h[1-6]|p|pre|[uod]l|li|dt|dd|table|thead|tfoot|tbody|tr|th|td|hr)$/,
@@ -413,20 +437,20 @@ kontext.elm.getRect = function( elm, padding )
 
 kontext.elm.insert = function( parent, elm, target, before )
 {
-	if( kontext.isNodeElement( parent ) && kontext.isNodeElement( elm ) )
+	if( kontext.isNode( parent ) && kontext.isNode( elm ) )
 	{
-		if( target && kontext.isNodeElement( target.parentNode ) ){
+		if( target && kontext.isNode( target.parentNode ) ){
 			target.parentNode.insertBefore( elm, ( before ) ? target : target.nextSibling );
 		}
-		else {
-			parent.insertBefore( elm, ( before ) ? target : target.nextSibling );
+		else{
+			parent.insertBefore( elm, null );
 		}
 	}
 };
 
 kontext.elm.replace = function( elm, target )
 {
-	if( kontext.isNodeElement( elm ) && kontext.isNodeElement( target ) && target.parentNode ){
+	if( kontext.isNode( elm ) && kontext.isNode( target ) && target.parentNode ){
 		var parent = target.parentNode;
 		parent.replaceChild( elm, target );
 	}
@@ -455,6 +479,98 @@ kontext.elm.sameParent = function( src, dest )
 			 src.parentNode === dest.parentNode );
 };
 
+/* MARK: Touchable */
+kontext.Touchable = function( elm )
+{
+	var box = undefined,
+		cover = undefined,
+		origin = {
+			point: undefined,
+			top: undefined,
+			left: undefined
+		},
+		init = function( elm )
+		{
+			var firstNode = elm.firstChild;
+			
+			while( firstNode && !kontext.isNode( firstNode ) ){
+				firstNode = firstNode.nextSibling;
+			}
+			
+			if( firstNode )
+			{
+				var rect = kontext.elm.getRect( elm ),
+					style = {
+					box: {
+						cursor: '-webkit-grab',
+						overflow: 'hidden'
+					},
+					cover: {
+						backgroundColor: '#000',
+						position: 'absolute',
+						width: '100%',
+						left: '0',
+						height: rect.height - 4 + 'px',
+						opacity: 0
+					}
+				};
+				// box setup
+				box = elm;
+				for( var p in style.box ){
+					box.style[p] = style.box[p];
+				}
+				// cover setup
+				cover = document.createElement('div');
+				for( var p in style.cover ){
+					cover.style[p] = style.cover[p];
+				}
+				cover.innerHTML = '&nbsp;';
+				kontext.elm.insert( box, cover, firstNode, true );
+				
+				// mouse
+				kontext.ev.add( cover, 'mousedown', mousedown, false );
+				kontext.ev.add( cover, 'mouseup', mouseup, true );
+				kontext.ev.add( cover, 'mousemove', mousemove, false );
+				kontext.ev.add( cover, 'mouseout', mouseup, true );
+				// touch
+				kontext.ev.add( cover, 'touchstart', mousedown, false );
+				kontext.ev.add( cover, 'touchend', mouseup, true );
+				kontext.ev.add( cover, 'touchmove', mousemove, false );
+			}
+		},
+		mousedown = function( evt ){
+			origin.point = kontext.point.getCursor( evt );
+			origin.top = box.scrollTop;
+			origin.left = box.scrollLeft;
+			box.style.cursor = '-webkit-grabbing';
+			kontext.ev.stop( evt );
+		},
+		mouseup = function( evt ){
+			delete origin.point;
+			origin.point = undefined;
+			box.style.cursor = '-webkit-grab';
+			kontext.ev.stop( evt );
+		},
+		mousemove = function( evt )
+		{
+			if( origin.point )
+			{
+				var current = kontext.point.getCursor( evt );
+				box.scrollLeft += ( origin.point.x - current.x );
+				box.scrollTop += ( origin.point.y - current.y );
+				origin.point.x = current.x;
+				origin.point.y = current.y;
+			}
+		};
+	
+	if( kontext.isString( elm ) ){
+		elm = document.getElementById(elm);
+	}
+	if( !kontext.isNode( elm ) ){
+		throw new Error( 'elm is not element node' );
+	}
+	init( elm );
+};
 
 /* MARK: Interface
 	Interface[type:val; method:val; cusor:val; useCapture:val; [args:val;]]
@@ -473,6 +589,7 @@ kontext.Interface = function( app )
 		{
 			var delegate = app;
 			
+			// console.log( elm );
 			if( args.delegate )
 			{
 				delegate = undefined;
@@ -577,13 +694,36 @@ function(i){
 }
 )(document.createElement('iframe'));
 */
+function ShowProperty( aObj, aEndl )
+{
+	var str = '',
+		props = [];
+	
+	aEndl = ( aEndl ) ? aEndl : "\n";
+	str += '<b>PROPERTIES</b>' + aEndl;
+	
+	for( var p in aObj )
+	{
+		if( !( p.match( /^(?:(inner|outer)(HTML|Text)|textContent)$/ ) ) ){
+			props.push( p );
+		}
+	}
+	props = props.sort();
+	for( var i = 0, length = props.length; i < length; i++ ){
+		try{		str += props[i] + ' = ' + aObj[props[i]] + aEndl;	}
+		catch(e){	str += props[i] + ' = ERROR{' + e + '}' + aEndl;	}
+	}
+	
+	return str;
+}
+
 // MARK: XML HTTP Request
-kontext.Request = function( url, method, aQuery )
+kontext.Request = function()
 {
 	// internal use
 	var ctx = {},
-		task = {};
-		ntask = [];
+		task = {},
+		ntask = [],
 		lock = false,
 		sandbox = undefined,
 		// use for iframe
@@ -615,8 +755,18 @@ kontext.Request = function( url, method, aQuery )
 			sandbox.form.target = 'kontext.Request.' + obj.id;
 			sandbox.form.enctype = ( obj.enctype ) ? obj.enctype : 'application/x-www-form-urlencoded';
 			sandbox.form.method = obj.method;
-			sandbox.form.action = obj.url + ( ( obj.url.match( /\?/ ) ) ? '&amp;' : '?' ) + 'via=';
-			sandbox.form.action += encodeURIComponent( document.location.href.split( '://', 2 )[0] + '://' + document.location.host );
+			sandbox.form.action = obj.url;
+			// referrer
+			if( obj.ref )
+			{
+				obj.ref = encodeURIComponent( document.location.href.split( '://', 2 )[0] + '://' + document.location.host );
+				if( obj.url.match( /\?/ ) ){
+					sandbox.form.action += '&amp;via=' + obj.ref;
+				}
+				else {
+					sandbox.form.action += '?via=' + obj.ref;
+				}
+			}
 			// append query
 			for( var p in query ){
 				var input = document.createElement('input');
@@ -631,6 +781,7 @@ kontext.Request = function( url, method, aQuery )
 		receiveMessage = function()
 		{
 			console.log( 'receiveMessage' );
+			console.log( arguments[1] );
 			/*
 			if( obj.submit )
 			{
@@ -647,6 +798,8 @@ kontext.Request = function( url, method, aQuery )
 		progress = function( evt, ctx )
 		{
 			console.log( 'progress' );
+			console.log( this.location );
+			console.log( ShowProperty( this ) );
 			// this.contentWindow.postMessage( 'hello world', '*' )
 			window.postMessage( 'hello world', '*' );
 		},
@@ -663,10 +816,11 @@ kontext.Request = function( url, method, aQuery )
 			this.contentDocument.close();
 			kontext.ev.remove( obj.frame );
 			kontext.ev.remove( obj.frame );
-			if( obj.delegate.apply( this, [evt,obj] ) ){
+			if( obj.onReady.apply( this, [evt,obj] ) ){
+				console.log( 'submitViaSandbox' );
 				// add events
-				kontext.ev.add( obj.frame, 'load', progress, true, null, obj );
 				kontext.ev.add( obj.frame, 'readystatechange', progress, true, null, obj );
+				// kontext.ev.add( obj.frame, 'load', progress, true, null, obj );
 				kontext.ev.add( window, 'message', receiveMessage, true, null, obj );
 				submitViaSandbox( obj );
 			}
@@ -689,7 +843,7 @@ kontext.Request = function( url, method, aQuery )
 		// use XMLHttpRequest
 		readyForXHR = function()
 		{
-			var next = this.ctx.delegate.apply( this, arguments );
+			var next = this.ctx.onReady.apply( this, arguments );
 			if( this.readyState === 4 ){
 				invokeFinish( this.ctx.id, next );
 			}
@@ -714,6 +868,9 @@ kontext.Request = function( url, method, aQuery )
 				if( query.length ){
 					query = query.join('&amp;');
 				}
+				else {
+					query = null;
+				}
 			}
 			else
 			{
@@ -729,17 +886,8 @@ kontext.Request = function( url, method, aQuery )
 			{
 				var val = obj.header[key];
 				
-				if( kontext.isString( val ) ){
-					obj.xhr.setRequestHeader( key, val );
-				}
-				else if( val instanceof Array )
-				{
-					for( var i = 0; i < val.length; i++ )
-					{
-						if( kontext.isString( val[i] ) ){
-							obj.xhr.setRequestHeader( key, val[i] );
-						}
-					}
+				for( var i = 0, len = val.length; i < len; i++ ){
+					obj.xhr.setRequestHeader( key, val[i] );
 				}
 			}
 			// obj.xhr.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
@@ -788,7 +936,7 @@ kontext.Request = function( url, method, aQuery )
 		this.setMethod( id, method );
 		this.setURL( id, url );
 		this.setQuery( id, query );
-		if( header instanceof Object )
+		if( kontext.isObject( header ) )
 		{
 			for( var p in header ){
 				 this.setHeader( id, p, header[p] );
@@ -805,40 +953,76 @@ kontext.Request = function( url, method, aQuery )
 	};
 	this.setMethod = function( id, method )
 	{
-		if( method && ctx[id] ){
+		if( ctx[id] && kontext.isString( method ) ){
 			ctx[id].method = method.toLowerCase();
 		}
 	};
 	this.setURL = function( id, url )
 	{
-		if( url && ctx[id] ){
+		if( ctx[id] && kontext.isString( url ) ){
 			ctx[id].url = url;
 		}
 	};
 	this.setHeader = function( id, key, val, overwrite )
 	{
-		var obj = ctx[id];
-		
-		if( obj )
+		if( ctx[id] && kontext.isString( key ) )
 		{
-			if( !obj.header[key] || overwrite )
+			var obj = ctx[id];
+			
+			if( !val ){
+				delete obj.header[key];
+			}
+			else
 			{
-				if( kontext.isString( val ) || kontext.isArray( val ) ){
-					obj.header[key] = val;
+				if( overwrite )
+				{
+					if( kontext.isString( val ) ){
+						obj.header[key] = val;
+					}
+					else if( kontext.isArray( val ) )
+					{
+						delete obj.header[key];
+						obj.header[key] = [];
+						
+						for( var i = 0, len = val.length; i < len; i++ )
+						{
+							if( kontext.isString( val[i] ) ){
+								obj.header[key].push( val[i] );
+							}
+						}
+						if( !obj.header[key].length ){
+							delete obj.header[key];
+						}
+					}
 				}
-			}
-			else if( !kontext.isArray( obj.header[key] ) ){
-				var tmp = obj.header[key];
-				obj.header[key] = [tmp];
-			}
-			else {
-				obj.header[key].push( val );
+				else
+				{
+					if( !kontext.isArray( obj.header[key] ) ){
+						obj.header[key] = [];
+					}
+					
+					if( kontext.isString( val ) ){
+						obj.header[key].push( val );
+					}
+					else if( kontext.isArray( val ) )
+					{
+						for( var i = 0, len = val.length; i < len; i++ )
+						{
+							if( kontext.isString( val[i] ) ){
+								obj.header[key].push( val[i] );
+							}
+						}
+					}
+					if( !obj.header[key].length ){
+						delete obj.header[key];
+					}
+				}
 			}
 		}
 	};
 	this.setQuery = function( id, query )
 	{
-		if( query instanceof Object && ctx[id] )
+		if( ctx[id] && kontext.isObject( query ) )
 		{
 			var obj = ctx[id];
 			
@@ -857,12 +1041,16 @@ kontext.Request = function( url, method, aQuery )
 			}
 		}
 	};
-	this.send = function( id, delegate, useSandbox )
+	this.send = function( id, ref, useSandbox, onReady, onAbort )
 	{
 		var obj = ctx[id];
+		
 		if( obj )
 		{
-			obj.delegate = delegate;
+			obj.onReady = onReady;
+			if( ref ){
+				obj.ref = true;
+			}
 			if( useSandbox === true ){
 				obj.useSandbox = true;
 				appendSandbox();
@@ -900,7 +1088,7 @@ kontext.isArray = function( arg ){
 kontext.isRegExp = function( arg ){
 	return ( arg && arg.constructor === RegExp );
 };
-kontext.isNodeElement = function( arg ){
+kontext.isNode = function( arg ){
 	return ( arg && arg.nodeType === Node.ELEMENT_NODE );
 };
 kontext.isNodeAttribute = function( arg ){
@@ -1463,7 +1651,7 @@ kontext.Selection = function()
 	{
 		var node = ( range ) ? range.startContainer : undefined;
 		
-		if( node && shouldElm && !kontext.isNodeElement( node ) ){
+		if( node && shouldElm && !kontext.isNode( node ) ){
 			node = node.parentNode;
 		}
 		
@@ -1473,7 +1661,7 @@ kontext.Selection = function()
 	{
 		var node = ( range ) ? range.endContainer : undefined;
 		
-		if( node && shouldElm && !kontext.isNodeElement( node ) ){
+		if( node && shouldElm && !kontext.isNode( node ) ){
 			node = node.parentNode;
 		}
 		
@@ -1524,7 +1712,7 @@ kontext.Selection = function()
 					if( node )
 					{
 						current = ( node === last ) ? undefined : node;
-						if( current && shouldElm && !kontext.isNodeElement( current ) ){
+						if( current && shouldElm && !kontext.isNode( current ) ){
 							continue;
 						}
 						break;
@@ -1602,7 +1790,7 @@ kontext.Selection = function()
 					{
 			*/			/*
 						ins = document.createElement( args );
-						if( kontext.isNodeElement( elms[i] ) ){
+						if( kontext.isNode( elms[i] ) ){
 							ins.innerHTML = elms[i].innerHTML;
 						}
 						else {
