@@ -8,6 +8,16 @@ kontext.def = {
 	maxNum: 1 << 24
 };
 
+// MARK: DOM node types
+if( !window.Node )
+{
+	var attr = 'ELEMENT_NODE,ATTRIBUTE_NODE,TEXT_NODE,CDATA_SECTION_NODE,ENTITY_REFERENCE_NODE,ENTITY_NODE,PROCESSING_INSTRUCTION_NODE,COMMENT_NODE,DOCUMENT_NODE,DOCUMENT_TYPE_NODE,DOCUMENT_FRAGMENT_NODE,NOTATION_NODE'.split(',');
+	window.Node = {};
+	for( var i = 0; i < attr.length; i++ ){
+		window.Node[attr[i]] = i+1;
+	}
+};
+
 // MARK: Point
 kontext.point = {};
 kontext.point.getCursor = function( evt )
@@ -119,6 +129,50 @@ kontext.Rect = function()
 
 // MARK: utility methods
 kontext.util = {};
+kontext.util.loadJS = function( src, callback )
+{
+	if( !src || !src.length )
+	{
+		if( kontext.isFunction( callback ) ){
+			callback(false);
+		}
+	}
+	else
+	{
+		var head = document.getElementsByTagName('head'),
+			onloaded = function()
+			{
+				if( src.length ){
+					loadNext();
+				}
+				else if( kontext.isFunction( callback ) ){
+					callback(true);
+				}
+			},
+			loadNext = function()
+			{
+				var elm = document.createElement('script');
+				
+				elm.src = src.shift();
+				elm.type = 'text/javascript';
+				elm.onload = onloaded;
+				elm.onreadystatechange = function()
+				{
+					if( this.readyState == "loaded" || this.readyState == "complete" ){
+						onloaded.apply( this );
+					}
+				};
+				head[0].appendChild( elm );
+			};
+		
+		if( typeof src === 'string' ){
+			src = [src];
+		}
+		
+		loadNext();
+	}
+};
+
 kontext.util.getDocumentScroll = function( doc )
 {
 	var scroll = undefined;
@@ -232,6 +286,57 @@ kontext.util.easeIn = function( origin, dest, smooth, msec, task, ctx )
 };
 
 
+// MARK: Cookie
+kontext.Cookie = {};
+kontext.Cookie.get = function()
+{
+	var cookieObj = undefined,
+		regex = new RegExp("; ", "g"),
+		cookie = ( document.cookie ) ? document.cookie.split( regex ) : undefined;
+	
+	if( cookie )
+	{
+		var len = cookie.length;
+		
+		cookieObj = {};
+		for( var i = 0; i < len; i++ )
+		{
+			var kv = cookie[i].split( '=', 2 );
+			if( !cookieObj[kv[0]] ){
+				cookieObj[kv[0]] = [];
+			}
+			cookieObj[kv[0]].push( kv[1] );
+		}
+	}
+
+	return cookieObj;
+};
+kontext.Cookie.set = function( obj )
+{
+	document.cookie = obj.name + '=' + escape(obj.val) + 
+					( ( obj.expires ) ? '; expires=' + obj.expire : '' ) +
+					( ( obj.path ) ? '; path=' + obj.path : '' ) +
+					( ( obj.domain ) ? '; domain=' + obj.domain : '' ) +
+					( ( obj.secure ) ? '; secure' : '' );
+};
+kontext.Cookie.del = function( name, domain, path )
+{
+	var cookies = kontext.Cookie.get();
+
+	if( cookies[name] != undefined )
+	{
+		var expire = new Date();
+		expire.setSeconds( expire.getSeconds() - 1 );
+		console.log( expire );
+		kontext.Cookie.set( { 
+			name: name, 
+			val: '',
+			expires: expire.toGMTString(),
+			path: path,
+			domain: domain
+		});
+	}
+};
 
 // MARK: Event
 kontext.ev = {};
@@ -283,19 +388,19 @@ kontext.ev.add = function( elm, type, func, useCapture, delegate, args )
 		preflight: function()
 		{
 			var evt = arguments[0] || window.event,
-				elm = evt.target,
-				msg = "kontext.js: could not invoke event '" + evt.type + "'";
+				msg = "kontext.js: could not invoke event '" + evt.type + "'",
+				ctx = this.ktx.evt[evt.type].ctx;
 			
 			// context undefined
 			if( !ctx ){
 				console.log( [msg,"reason: context undefined"].join("\n") );
 			}
 			// delegate undefined
-			else if( !ctx.delegate || typeof ctx.delegate !== 'object' )
+			else if( !ctx.delegate )
 			{
 				// func is not typeof function
 				if( !kontext.isFunction( ctx.func ) ){
-					console.log( [msg,"reason: function undefined"].join("\n") );
+					console.log( [msg,"reason: function " + ctx.func + " undefined"].join("\n") );
 				}
 				// call function
 				else {
@@ -501,19 +606,19 @@ kontext.Touchable = function( elm )
 			{
 				var rect = kontext.elm.getRect( elm ),
 					style = {
-					box: {
-						cursor: '-webkit-grab',
-						overflow: 'hidden'
-					},
-					cover: {
-						backgroundColor: '#000',
-						position: 'absolute',
-						width: '100%',
-						left: '0',
-						height: rect.height - 4 + 'px',
-						opacity: 0
-					}
-				};
+						box: {
+							cursor: '-webkit-grab',
+							overflow: 'hidden'
+						},
+						cover: {
+							backgroundColor: '#000',
+							position: 'absolute',
+							width: '100%',
+							left: '0',
+							height: rect.height - 4 + 'px',
+							opacity: 0
+						}
+					};
 				// box setup
 				box = elm;
 				for( var p in style.box ){
@@ -524,6 +629,7 @@ kontext.Touchable = function( elm )
 				for( var p in style.cover ){
 					cover.style[p] = style.cover[p];
 				}
+				cover.className = 'TouchCover';
 				cover.innerHTML = '&nbsp;';
 				kontext.elm.insert( box, cover, firstNode, true );
 				
@@ -566,7 +672,8 @@ kontext.Touchable = function( elm )
 	if( kontext.isString( elm ) ){
 		elm = document.getElementById(elm);
 	}
-	if( !kontext.isNode( elm ) ){
+	// if( !kontext.isNode( elm ) ){
+	if( !elm ){
 		throw new Error( 'elm is not element node' );
 	}
 	init( elm );
@@ -589,7 +696,6 @@ kontext.Interface = function( app )
 		{
 			var delegate = app;
 			
-			// console.log( elm );
 			if( args.delegate )
 			{
 				delegate = undefined;
@@ -761,7 +867,7 @@ kontext.Request = function()
 			{
 				obj.ref = encodeURIComponent( document.location.href.split( '://', 2 )[0] + '://' + document.location.host );
 				if( obj.url.match( /\?/ ) ){
-					sandbox.form.action += '&amp;via=' + obj.ref;
+					sandbox.form.action += '&via=' + obj.ref;
 				}
 				else {
 					sandbox.form.action += '?via=' + obj.ref;
@@ -866,7 +972,7 @@ kontext.Request = function()
 			{
 				obj.xhr.open( obj.method, url, true );
 				if( query.length ){
-					query = query.join('&amp;');
+					query = query.join('&');
 				}
 				else {
 					query = null;
@@ -875,7 +981,7 @@ kontext.Request = function()
 			else
 			{
 				if( query.length ){
-					query = '&amp;' + query.join('&amp;');
+					query = '&' + query.join('&');
 				}
 				obj.xhr.open( obj.method, url + query, true );
 				query = null;
@@ -1064,9 +1170,554 @@ kontext.Request = function()
 	};
 };
 
+/*
+	MARK: Geometry
+	Supported Google Maps version 3
+	(c) Copyright 2010 Masatoshi Teruya All rights reserved.
+*/
+kontext.Geo = {};
+kontext.Geo.Hash = function()
+{
+	var PRECISION_DEFAULT = 11,
+		PRECISION_MAX = 16,
+		BITS = [16,8,4,2,1],
+		BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz'.split(''),
+		BASE32_CODE = {};
+	
+	// setup
+	for( var i = 0, len = BASE32.length; i < len; i++ ){
+		BASE32_CODE[BASE32[i]] = i;
+	}
+	
+	this.encode = function( lat, lon, precision, callback )
+	{
+		var hash = '',
+			rangeLat = [-90.0, 90.0],
+			rangeLon = [-180.0, 180.0],
+			islon = true,
+			bit = 0, code = 0,
+			calc = function()
+			{
+				var mid;
+				
+				if( islon )
+				{
+					mid = ( rangeLon[0] + rangeLon[1] ) / 2;
+					if( lon >= mid ){
+						code |= BITS[bit];
+						rangeLon[0] = mid;
+					}
+					else{
+						rangeLon[1] = mid;
+					}
+				}
+				else
+				{
+					mid = ( rangeLat[0] + rangeLat[1] ) / 2;
+					if( lat >= mid ){
+						code |= BITS[bit];
+						rangeLat[0] = mid;
+					}
+					else{
+						rangeLat[1] = mid;
+					}
+				}
+				islon = !islon;
+				if( bit < 4 ){
+					bit++;
+				}
+				else {
+					hash += BASE32[code];
+					bit = code = 0;
+					precision--;
+				}
+				if( precision ){
+					setTimeout( calc, 1 );
+				}
+				else {
+					callback( hash );
+				}
+			};
+		
+		if( !precision || precision < 1 ){
+			precision = PRECISION_DEFAULT;
+		}
+		else if( precision > PRECISION_MAX ){
+			precision = PRECISION_MAX;
+		}
+		calc();
+	};
+	
+	this.decode = function( geohash, callback )
+	{
+		var hash = geohash.toLowerCase().split(''),
+			code = hash.shift(),
+			rangeLat = [-90.0, 90.0],
+			rangeLon = [-180.0, 180.0],
+			islon = true,
+			calc = function()
+			{
+				if( BASE32_CODE[code] === undefined ){
+					callback( new Error( 'invalid hash code:' + idx ) );
+				}
+				else
+				{
+					code = BASE32_CODE[code];
+					for( var bit = 0; bit < 5; bit++ )
+					{
+						if( islon ){
+							rangeLon[( code & BITS[bit] ) ? 0 : 1] = ( rangeLon[0] + rangeLon[1] ) / 2;
+						}
+						else {
+							rangeLat[( code & BITS[bit] ) ? 0 : 1] = ( rangeLat[0] + rangeLat[1] ) / 2;
+						}
+						islon = !islon;
+					}
+					
+					if( ( code = hash.shift() ) ){
+						setTimeout( calc, 1 );
+					}
+					else {
+						callback( undefined, ( rangeLat[0] + rangeLat[1] ) / 2, ( rangeLon[0] + rangeLon[1] ) / 2 );
+					}
+				}
+			};
+		
+		calc();
+	};
+
+};
+
+// MARK: WGS84(1984)
+// 緯度 = latitude = y
+// 経度 = longitude = x
+kontext.Geo.WGS84 = function( opt )
+{
+		// 扁平率 = 298.257223563
+	var _f = 1 / 298.257223563;
+		// 軌道長半径(m) = 6,378,137.0
+		_major = 6378137.0,
+		// 軌道短半径(m) = 6,356,752.314245
+		_minor = 6356752.314245,
+		// 離心率(eccentricity) = ( ( 長半径 * 長半径 ) - ( 短半径 * 短半径 ) ) / ( 長半径 * 長半径 )
+		tmp = _major * _major;
+		_eccentricity = ( tmp - ( _minor * _minor ) ) / tmp;
+		_rad = Math.PI / 180;
+		_deg = 180 / Math.PI;
+		distWGS84 = 0;
+		trigWGS84 = null;
+		origin = {
+			// 緯度
+			lat: {
+				// degree
+				deg: 0,
+				// radian
+				rad: 0,
+				sin: 0,
+				cos: 0
+			},
+			// 経度
+			lng: {
+				// degree
+				deg: 0,
+				// radian
+				rad: 0,
+				sin: 0,
+				cos: 0
+			}
+		};
+	
+	this.setOrigin = function( lat, lng )
+	{
+		origin.lat.deg = lat;
+		origin.lat.rad = _rad * lat;
+		origin.lat.sin = Math.sin( origin.lat.rad );
+		origin.lat.cos = Math.cos( origin.lat.rad );
+		
+		origin.lng.deg = lng;
+		origin.lng.rad = _rad * lng;
+		origin.lng.sin = Math.sin( origin.lng.rad );
+		origin.lng.cos = Math.cos( origin.lng.rad );
+	};
+	// aDistance = meter
+	this.setDistance = function( distance ){
+		distWGS84 = distance / _major;
+		trigWGS84 = { sin: Math.sin( distWGS84 ), cos: Math.cos( distWGS84 ) };
+	};
+	this.getLatLngForAngle = function( angle )
+	{
+		angle = angle * _rad;
+		var lat = Math.asin( origin.lat.sin * trigWGS84.cos + origin.lat.cos * trigWGS84.sin * Math.cos( angle ) );
+		var lng = origin.lng.rad + Math.atan2( Math.sin( angle ) * trigWGS84.sin * origin.lat.cos, ( trigWGS84.cos - origin.lat.sin * origin.lat.sin ) );
+		lng = ( lng + Math.PI ) % ( 2 * Math.PI ) - Math.PI;
+		return { lat: lat * _deg, lng: lng * _deg };
+	};
+	this.deg2rad = function( lat, lng )
+	{
+		return {
+			lat: aLat * _rad,
+			lng: aLng * _rad
+		};
+	};
+	this.getDistance = function( latlng )
+	{
+		var dest = this.deg2rad( latlng.lat(), latlng.lng() ),
+			deg = origin.lat.sin * Math.sin( dest.lat ) + origin.lat.cos * Math.cos( dest.lat ) * Math.cos( dest.lng - origin.lng.rad ),
+			dist = _major * ( Math.atan( -deg / Math.sqrt( -deg * deg + 1 ) ) + Math.PI / 2 );
+		
+		return Math.round( dist );
+	};
+	/*
+		meridian = 子午線曲線率半径
+		primeVertical = 卯酉線半径
+		distance = f( latlng1, latlng2 )
+				= sqrt( pow( latDiff * meridian, 2 ) + pow( lngDiff * primeVertical * cos( ave ), 2 ) )
+		latDiff = lat1 - lat2 * degree;
+		lngDiff = lng1 - lng2 * degree;
+		ave = ( lat1 + lat2 ) * degree / 2;
+	*/
+	this.getDistance2 = function( latlng )
+	{
+		var dest = this.deg2rad( latlng.lat(), latlng.lng() ),
+			ave = ( origin.lat.rad + dest.lat ) / 2,
+			latDiff = origin.lat.rad - dest.lat,
+			lngDiff = origin.lng.rad - dest.lng,
+			sin = Math.sin( ave ),
+			W = 1 - _eccentricity * sin * sin,
+			meridian = _major / Math.sqrt( Math.pow( W, 3 ) ),
+			primeVertical = _minor / Math.sqrt( W );
+		
+		latDiff = latDiff * meridian;
+		lngDiff = lngDiff * primeVertical * Math.cos( ave );
+		
+		return Math.round( Math.sqrt( ( latDiff * latDiff ) + ( lngDiff * lngDiff ) ) );
+	};
+	
+	this.setOrigin( opt.lat, opt.lng );
+	this.setDistance( opt.distance );
+};
+
+kontext.Geo.Corder = function()
+{
+	var corder = new google.maps.Geocoder();
+	
+	// MARK: GeoCorder
+	this.getByAddr = function( req, callback )
+	{
+		corder.geocode( req, function( res, rc )
+		{
+			var latlng = undefined;
+			switch( rc )
+			{
+				case google.maps.GeocoderStatus.OK:
+					latlng = res[0].geometry.location;
+				break;
+				case google.maps.GeocoderStatus.ERROR:
+					alert( 'There was a problem contacting the Google servers.' );
+				break;
+				
+				case google.maps.GeocoderStatus.INVALID_REQUEST:
+					alert( 'This GeocoderRequest was invalid.' );
+				break;
+
+				case google.maps.GeocoderStatus.OVER_QUERY_LIMIT:
+					alert( 'The webpage has gone over the requests limit in too short a period of time.' );
+				break;
+				
+				case google.maps.GeocoderStatus.REQUEST_DENIED:
+					alert( 'The webpage is not allowed to use the geocoder.' );
+				break;
+				
+				case google.maps.GeocoderStatus.UNKNOWN_ERROR:
+					alert( 'A geocoding request could not be processed due to a server error. The request may succeed if you try again.' );
+				break;
+				
+				// google.maps.GeocoderStatus.ZERO_RESULTS
+				default:
+					alert('不明な住所です。');
+			}
+			
+			if( typeof callback === 'function' ){
+				callback( latlng );
+			}
+		});
+	};
+};
+
+kontext.Geo.Map = function( elm, opt, delegate )
+{
+	var defaultOpt = {
+			zoom: 13,
+			mapTypeId: google.maps.MapTypeId.ROADMAP,
+			scaleControl: true,
+			scrollwheel: false
+		},
+		map = undefined;
+	
+	// getter/setter
+	this.__defineGetter__( 'self', function(){
+		return map;
+	});
+	this.__defineSetter__( 'options', function( opts ){
+		map.setOptions( opts );
+	});
+	this.__defineSetter__( 'center', function( latlng ){
+		map.setCenter( latlng );
+	});
+	this.__defineSetter__( 'panTo', function( latlng ){
+		map.panTo( latlng );
+	});
+	this.__defineSetter__( 'zoom', function( zoom ){
+		map.setZoom( zoom );
+	});
+	
+	// MARK: public method
+	this.setEvent = function( evt, method )
+	{
+		google.maps.event.addDomListener( map, evt, function(){
+			delegate[method].apply( delegate, arguments );
+		});
+	};
+	
+	// marge otion
+	for( var p in opt ){
+		defaultOpt[p] = opt[p];
+	}
+	map = new google.maps.Map( elm, defaultOpt );
+};
+
+kontext.Geo.Markers = function( map, delegate )
+{
+	var serial = 0,
+		mkr = {};
+	
+	this.add = function( opt ){
+		serial++;
+		mkr[''+serial] = new google.maps.Marker( opt );
+		mkr[''+serial].setMap( map );
+		return serial;
+	};
+	this.remove = function( id )
+	{
+		if( mkr[id] ){
+			mkr[id].setMap( null );
+			delete mkr[id];
+		}
+	};
+	this.getPosition = function( id ){
+		return mkr[id].getPosition();
+	};
+	this.setPosition = function( id, latlng ){
+		mkr[id].setPosition( latlng );
+	};
+	this.setOptions = function( id, opts ){
+		mkr[id].setOptions( opts );
+	};
+	this.setEvent = function( id, evt, method )
+	{
+		google.maps.event.addDomListener( mkr[id], evt, function(){
+			delegate[method].apply( delegate, arguments );
+		});
+	};
+	this.setCenter = function( id ){
+		mkr[id].getMap().setCenter( mkr[id].getPosition() );
+	};
+	this.panTo = function( id ){
+		mkr[id].getMap().panTo( mkr[id].getPosition() );
+	};
+	this.setZoom = function( zoom ){
+		mkr[id].getMap().setZoom( zoom );
+	};
+};
+
+kontext.Geo.InfoWindow = function( opt )
+{
+	var infoWindow = new google.maps.InfoWindow( opt );
+	
+	// getter/setter
+	this.__defineGetter__( 'self', function(){
+		return infoWindow;
+	});
+	this.__defineGetter__( 'content', function(){
+		return infoWindow.getContent();
+	});
+	this.__defineSetter__( 'content', function( content ){
+		infoWindow.setContent( content );
+	});
+	this.__defineGetter__( 'position', function(){
+		return infoWindow.getPosition();
+	});
+	this.__defineSetter__( 'position', function( latlng ){
+		infoWindow.setPosition( latlng );
+	});
+	this.__defineGetter__( 'zIndex', function(){
+		return infoWindow.getZIndex();
+	});
+	this.__defineSetter__( 'zIndex', function( idx ){
+		infoWindow.setZIndex( idx );
+	});
+	this.__defineGetter__( 'options', function( opt ){
+		infoWindow.setOptions( opt );
+	});
+	
+	this.open = function( map, anchor ){
+		infoWindow.open( map, anchor );
+	};
+	this.close = function(){
+		infoWindow.close();
+	};
+	
+	this.setEvent = function( evt, once, method )
+	{
+		if( once ){
+			return google.maps.event.addDomListenerOnce( infoWindow, evt, function(){
+				delegate[method].apply( delegate, arguments );
+			});
+		}
+		
+		return google.maps.event.addDomListener( infoWindow, evt, function(){
+			delegate[method].apply( delegate, arguments );
+		});
+	};
+};
+
+kontext.Geo.Polygon = function( map )
+{
+	var serial = 0,
+		plygs = {};
+	
+	this.add = function( opt ){
+		serial++;
+		plygs[''+serial] = new google.maps.Polygon( opt );
+		plygs[''+serial].setMap( map );
+		return serial;
+	};
+	this.remove = function( id ){
+		plygs[id].setMap(null);
+		delete plygs[polyId];
+	};
+	this.drawCircle = function( latlng, dist, smooth )
+	{
+		var corner = 1,
+			paths = [],
+			wgs84 = new kontext.Geo.WGS84({
+				distance:dist, 
+				lat:latlng.lat(),
+				lng:latlng.lng()
+			});
+		
+		if( smooth ){
+			corner = 360 / ( ( smooth < 2 ) ? 5 : smooth );
+		}
+		else{
+			corner = 10;
+		}
+		
+		for( var i = 0; i < 360; i += corner )
+		{
+			if( i <= 360 ){
+				latlng = wgs84.getLatLngForAngle( i );
+				paths.push( new google.maps.LatLng( latlng.lat, latlng.lng ) );
+			}
+		}
+		
+		this.add( { paths:paths } );
+		// map.fitBounds( new google.maps.LatLngBounds( paths.getAt( 0 ), paths.getAt( Math.ceil( paths.length / 2 ) ) ) );
+	};
+};
+
+/*
+kontext.Geo.Direction = function()
+{
+	var direction = new google.maps.DirectionsService();
+
+	this.route = function( req, callback )
+	{
+		direction.route( req, function( res, rc )
+		{
+			switch( rc )
+			{
+				case google.maps.GeocoderStatus.OK:
+					latlng = res[0].geometry.location;
+				break;
+				case google.maps.GeocoderStatus.ERROR:
+					alert( 'There was a problem contacting the Google servers.' );
+				break;
+				
+				case google.maps.GeocoderStatus.INVALID_REQUEST:
+					alert( 'This GeocoderRequest was invalid.' );
+				break;
+
+				case google.maps.GeocoderStatus.OVER_QUERY_LIMIT:
+					alert( 'The webpage has gone over the requests limit in too short a period of time.' );
+				break;
+				
+				case google.maps.GeocoderStatus.REQUEST_DENIED:
+					alert( 'The webpage is not allowed to use the geocoder.' );
+				break;
+				
+				case google.maps.GeocoderStatus.UNKNOWN_ERROR:
+					alert( 'A geocoding request could not be processed due to a server error. The request may succeed if you try again.' );
+				break;
+				
+				// google.maps.GeocoderStatus.ZERO_RESULTS
+				default:
+					alert('不明な住所です。');
+			}
+
+		});
+	}
+	this.SetDirection = function( aDirection, aGMap )
+	{
+		var direction = null;
+		if( aDirection )
+		{
+			var self = this;
+			
+			if( this.direction ){
+				delete this.direction;
+			}
+			direction = new GDirections( aGMap, aDirection );
+			GEvent.addListener( direction, 'error', function(){
+				self.Error( this );
+			} );
+		}
+		
+		return direction;
+	};
+	this.Error = function( aErr )
+	{
+		var gdir = this.direction;
+		
+		if (gdir.getStatus().code == G_GEO_UNKNOWN_ADDRESS){
+			alert("No corresponding geographic location could be found for one of the specified addresses. This may be due to the fact that the address is relatively new, or it may be incorrect.\nError code: " + gdir.getStatus().code);
+		}
+		else if (gdir.getStatus().code == G_GEO_SERVER_ERROR){
+			alert("A geocoding or directions request could not be successfully processed, yet the exact reason for the failure is not known.\n Error code: " + gdir.getStatus().code);
+		}
+		else if (gdir.getStatus().code == G_GEO_MISSING_QUERY){
+			alert("The HTTP q parameter was either missing or had no value. For geocoder requests, this means that an empty address was specified as input. For directions requests, this means that no query was specified in the input.\n Error code: " + gdir.getStatus().code);
+		}
+		else if (gdir.getStatus().code == G_GEO_BAD_KEY){
+			alert("The given key is either invalid or does not match the domain for which it was given. \n Error code: " + gdir.getStatus().code);
+		}
+		else if (gdir.getStatus().code == G_GEO_BAD_REQUEST){
+			alert("A directions request could not be successfully parsed.\n Error code: " + gdir.getStatus().code);
+		}
+		else{
+			alert("An unknown error occurred.\n" + ShowProperty( gdir.getStatus() ) );
+		}
+	};
+};
+*/
 
 
-// MARK: checker
+
+
+// MARK: Type Checker
+kontext.isClassOf = function( arg, className ){
+	return ( arg && arg.constructor === className );
+};
 kontext.isBool = function( arg ){
 	return ( typeof arg === 'boolean' );
 };
@@ -1077,13 +1728,16 @@ kontext.isString = function( arg ){
 	return ( typeof arg === 'string' );
 };
 kontext.isFunction = function( arg ){
-	return ( arg && typeof arg === 'function' );
+	return ( arg && ( typeof arg === 'function' || typeof arg.constructor === 'function' ) );
 };
 kontext.isObject = function( arg ){
-	return ( arg && arg.constructor === Object );
+	return ( typeof arg === 'object' );
 };
 kontext.isArray = function( arg ){
 	return ( arg && arg.constructor === Array );
+};
+kontext.isDate = function( arg ){
+	return ( arg && arg.constructor === Date );
 };
 kontext.isRegExp = function( arg ){
 	return ( arg && arg.constructor === RegExp );
@@ -1100,7 +1754,7 @@ kontext.isNodeText = function( arg ){
 
 
 
-// MARK: still working
+// !!!: still working
 
 // MARK: QuadTree
 kontext.QuadTree = {};
@@ -1638,7 +2292,7 @@ kontext.Selection = function()
 		{
 			current = this.firstNode( shouldElm );
 			if( current ){
-				range.setStart( current );
+				range.setStart( current, 0 );
 			}
 		}
 		else {
