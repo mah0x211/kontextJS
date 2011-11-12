@@ -1,14 +1,14 @@
 /* (c) 2005-2011 masatoshi teruya, all rights reserved. */
 
-// MARK: kontext
+/* MARK: kontext */
 var kontext = {};
 
 kontext.def = {
-    body: function(){ return document.getElementsByTagName('body').item(0); },
-    maxNum: 1 << 24
+body: function(){ return document.getElementsByTagName('body').item(0); },
+maxNum: 1 << 24
 };
 
-// MARK: DOM node types
+/* MARK: DOM node types */
 if( !window.Node )
 {
     var attr = 'ELEMENT_NODE,ATTRIBUTE_NODE,TEXT_NODE,CDATA_SECTION_NODE,ENTITY_REFERENCE_NODE,ENTITY_NODE,PROCESSING_INSTRUCTION_NODE,COMMENT_NODE,DOCUMENT_NODE,DOCUMENT_TYPE_NODE,DOCUMENT_FRAGMENT_NODE,NOTATION_NODE'.split(',');
@@ -18,7 +18,7 @@ if( !window.Node )
     }
 };
 
-// MARK: Point
+/* MARK: Point */
 kontext.point = {};
 kontext.point.getCursor = function( evt )
 {
@@ -36,7 +36,7 @@ kontext.point.getCursor = function( evt )
         };
     }
 };
-// hit test by point
+/* hit test by point */
 kontext.point.hitTest = function( pt, elm )
 {
     if( elm )
@@ -52,7 +52,7 @@ kontext.point.hitTest = function( pt, elm )
 };
 kontext.point.trackMouse = function( origin, cbMove, cbUp, args )
 {
-    // delegate mouseMove/drag
+    /* delegate mouseMove/drag */
     var mev = {
         move: function( evt )
         {
@@ -61,7 +61,7 @@ kontext.point.trackMouse = function( origin, cbMove, cbUp, args )
             }
             kontext.ev.stop( evt );
         },
-        // delegate mouseUp
+        /* delegate mouseUp */
         up: function( evt )
         {
             kontext.ev.removeListener( document, 'mousemove', mev.move, false );
@@ -72,7 +72,7 @@ kontext.point.trackMouse = function( origin, cbMove, cbUp, args )
             }
             kontext.ev.stop( evt );
         },
-        // delegate selectStart -> mouseSelect
+        /* delegate selectStart -> mouseSelect */
         select: function( evt ){
             return kontext.ev.stop( evt );
         }
@@ -83,7 +83,7 @@ kontext.point.trackMouse = function( origin, cbMove, cbUp, args )
     kontext.ev.addListener( document, 'selectstart', mev.select, false );
 };
 
-// MARK: Rect
+/* MARK: Rect */
 kontext.Rect = function()
 {
     var padding = 0,
@@ -118,16 +118,14 @@ kontext.Rect = function()
             this.center.y += padding;
         }
     };
-    this.isInto = function( x, y )
-    {
-        return ( x >= this.left && x <= this.right && 
-                 y >= this.top && y <= this.bottom );
+    this.isInto = function( x, y ){
+        return ( x >= this.left && x <= this.right && y >= this.top && y <= this.bottom );
     };
     
     retouch.apply( this );
 };
 
-// MARK: utility methods
+/* MARK: utility methods */
 kontext.util = {};
 kontext.util.loadJS = function( src, callback )
 {
@@ -208,7 +206,7 @@ kontext.util.strTok = function( str )
     if( str )
     {
         var args = str.split( /;/ );
-    
+        
         if( args )
         {
             var arg;
@@ -236,7 +234,7 @@ kontext.util.trackValue = function( origin, dest, msec, task, smooth, ctx )
             interval = setInterval( function()
             {
                 var last = false;
-                
+            
                 if( ( countUp ) ? ( origin < dest ) : ( origin > dest ) )
                 {
                     var diff = origin - dest,
@@ -249,7 +247,6 @@ kontext.util.trackValue = function( origin, dest, msec, task, smooth, ctx )
                 else {
                     last = true;
                 }
-                
                 if( last ){
                     clearInterval( interval );
                     task( dest, true, ctx );
@@ -258,7 +255,6 @@ kontext.util.trackValue = function( origin, dest, msec, task, smooth, ctx )
                     clearInterval( interval );
                     task( dest, true, ctx );
                 }
-                
             }, msec );
     }
 };
@@ -286,7 +282,7 @@ kontext.util.easeIn = function( origin, dest, smooth, msec, task, ctx )
 };
 
 
-// MARK: Cookie
+/* MARK: Cookie */
 kontext.Cookie = {};
 kontext.Cookie.get = function()
 {
@@ -308,7 +304,7 @@ kontext.Cookie.get = function()
             cookieObj[kv[0]].push( kv[1] );
         }
     }
-
+    
     return cookieObj;
 };
 kontext.Cookie.set = function( obj )
@@ -322,13 +318,13 @@ kontext.Cookie.set = function( obj )
 kontext.Cookie.del = function( name, domain, path )
 {
     var cookies = kontext.Cookie.get();
-
+    
     if( cookies[name] != undefined )
     {
         var expire = new Date();
         expire.setSeconds( expire.getSeconds() - 1 );
         console.log( expire );
-        kontext.Cookie.set( { 
+        kontext.Cookie.set({
             name: name, 
             val: '',
             expires: expire.toGMTString(),
@@ -338,7 +334,7 @@ kontext.Cookie.del = function( name, domain, path )
     }
 };
 
-// MARK: Event
+/* MARK: Event */
 kontext.ev = {};
 kontext.ev.addListener = function( elm, type, func, useCapture )
 {
@@ -369,20 +365,20 @@ kontext.ev.add = function( elm, type, func, useCapture, delegate, args )
             args: args
         };
     
-    // define context if undefined
+    /* define context if undefined */
     if( !elm.ktx || !( elm.ktx instanceof Object ) ){
         elm.ktx = { evt:{} };
     }
-    // define context.event if undefined
+    /* define context.event if undefined */
     else if( !elm.ktx.evt || !( elm.ktx.evt instanceof Object ) ){
         elm.ktx.evt = {};
     }
-    // remove cuurent event context if defined
+    /* remove cuurent event context if defined */
     else if( elm.ktx.evt[type] ){
         kontext.ev.remove( elm, type, null, null )
     }
     
-    // add listeners hash
+    /* add listeners hash */
     elm.ktx.evt[type] = {
         ctx: ctx,
         preflight: function()
@@ -390,45 +386,45 @@ kontext.ev.add = function( elm, type, func, useCapture, delegate, args )
             var evt = arguments[0] || window.event,
                 msg = "kontext.js: could not invoke event '" + evt.type + "'",
                 ctx = this.ktx.evt[evt.type].ctx;
-            
-            // context undefined
+                
+            /* context undefined */
             if( !ctx ){
                 console.log( [msg,"reason: context undefined"].join("\n") );
             }
-            // delegate undefined
+            /* delegate undefined */
             else if( !ctx.delegate )
             {
-                // func is not typeof function
+                /* func is not typeof function */
                 if( !kontext.isFunction( ctx.func ) ){
                     console.log( [msg,"reason: function " + ctx.func + " undefined"].join("\n") );
                 }
-                // call function
+                /* call function */
                 else {
                     return ctx.func.apply( this, [evt,ctx] );
                 }
             }
-            // func undefined
+            /* func undefined */
             else if( !ctx.func ){
                 console.log( [msg,"reason: function undefined"].join("\n") );
             }
-            // func is string
+            /* func is string */
             else if( kontext.isString( ctx.func ) )
             {
-                // delegate.func undefined
+                /* delegate.func undefined */
                 if( !kontext.isFunction( ctx.delegate[ctx.func] ) ){
                     console.log( [msg,"reason: delegate method '" + ctx.func + "' undefined"].join("\n") );
                 }
-                // call delegate method
+                /* call delegate method */
                 else {
                     return ctx.delegate[ctx.func]( evt, ctx );
                 }
             }
-            // func is function
+            /* func is function */
             else if( kontext.isFunction( ctx.func ) ){
-                // call method apply delegate
+                /* call method apply delegate */
                 return ctx.func.apply( ctx.delegate, [evt,ctx] );
             }
-            // invalid func
+            /* invalid func */
             else {
                 console.log( [msg,"reason: invalid function type"].join("\n") );
             }
@@ -481,7 +477,7 @@ kontext.ev.stop = function( evt )
 };
 
 
-// MARK: Elements
+/* MARK: Elements */
 kontext.elm = {};
 kontext.elm.isBlockLevel = function( elm, onself )
 {
@@ -492,7 +488,7 @@ kontext.elm.isBlockLevel = function( elm, onself )
         var tag = elm.nodeName.toLowerCase(),
             block = /^(body|blockquote|form|noframe|script|noscript|div|fieldset|address|h[1-6]|p|pre|[uod]l|li|dt|dd|table|thead|tfoot|tbody|tr|th|td|hr)$/,
             oneself = /^(div|address|h[1-6]|p|pre)$/
-    
+        
         if( ( rc += block.test( tag ) ) ){
             rc += oneself.test( tag );
         }
@@ -526,7 +522,7 @@ kontext.elm.getRect = function( elm, padding )
     var pad = ( kontext.isNumber( padding ) ) ? padding : 0,
         rect = new kontext.Rect(),
         parent = elm;
-        
+    
     rect.left = elm.offsetLeft;
     rect.top = elm.offsetTop;
     rect.width = ( elm.offsetWidth > elm.clientWidth ) ? elm.offsetWidth : elm.clientWidth;
@@ -601,7 +597,7 @@ kontext.Touchable = function( elm )
             while( firstNode && !kontext.isNode( firstNode ) ){
                 firstNode = firstNode.nextSibling;
             }
-            
+        
             if( firstNode )
             {
                 var rect = kontext.elm.getRect( elm ),
@@ -619,12 +615,13 @@ kontext.Touchable = function( elm )
                             opacity: 0
                         }
                     };
-                // box setup
+                
+                /* box setup */
                 box = elm;
                 for( var p in style.box ){
                     box.style[p] = style.box[p];
                 }
-                // cover setup
+                /* cover setup */
                 cover = document.createElement('div');
                 for( var p in style.cover ){
                     cover.style[p] = style.cover[p];
@@ -633,12 +630,12 @@ kontext.Touchable = function( elm )
                 cover.innerHTML = '&nbsp;';
                 kontext.elm.insert( box, cover, firstNode, true );
                 
-                // mouse
+                /* mouse */
                 kontext.ev.add( cover, 'mousedown', mousedown, false );
                 kontext.ev.add( cover, 'mouseup', mouseup, true );
                 kontext.ev.add( cover, 'mousemove', mousemove, false );
                 kontext.ev.add( cover, 'mouseout', mouseup, true );
-                // touch
+                /* touch */
                 kontext.ev.add( cover, 'touchstart', mousedown, false );
                 kontext.ev.add( cover, 'touchend', mouseup, true );
                 kontext.ev.add( cover, 'touchmove', mousemove, false );
@@ -672,24 +669,23 @@ kontext.Touchable = function( elm )
     if( kontext.isString( elm ) ){
         elm = document.getElementById(elm);
     }
-    // if( !kontext.isNode( elm ) ){
-    if( !elm ){
+    if( !kontext.isNode( elm ) ){
         throw new Error( 'elm is not element node' );
     }
     init( elm );
 };
 
 /* MARK: Interface
-    Interface[type:val; method:val; cusor:val; useCapture:val; [args:val;]]
-*/
+ Interface[type:val; method:val; cusor:val; useCapture:val; [args:val;]]
+ */
 kontext.Interface = function( app )
 {
-    // internal use
+    /* internal use */
     var tagNames = [],
         items = [],
         extr = new RegExp( /\bInterface\[([^\]]+)]/ );
     
-    // methods
+    /* methods */
     this.bind = function( elm, args )
     {
         if( args && args.type )
@@ -706,16 +702,16 @@ kontext.Interface = function( app )
             
             if( delegate && kontext.isFunction( delegate.constructor ) )
             {
-                // useCapture
+                /* useCapture */
                 args.useCapture = false;
-                // cursor style
+                /* cursor style */
                 if( args.cursor ){
                     elm.style.cursor = args.cursor;
                 }
                 
-                // add event
+                /* add event */
                 kontext.ev.add( elm, args.type, args.method, args.useCapture, delegate, args );
-                // save target elm
+                /* save target elm */
                 items.push( elm );
             }
             else {
@@ -726,7 +722,7 @@ kontext.Interface = function( app )
     this.unbind = function( elm )
     {
         var new_item = [],
-            item;
+        item;
         
         while( ( item = this.items.shift() ) )
         {
@@ -740,13 +736,13 @@ kontext.Interface = function( app )
     this.extract = function( elm )
     {
         var className = extr.exec( elm.className ),
-            args = undefined;
+        args = undefined;
         
         if( className && className.length === 2 ){
             args = kontext.util.strTok( className[1] );
         }
         
-        // add event
+        /* add event */
         this.bind( elm, args );
     };
     this.enable = function( tags, from )
@@ -787,23 +783,23 @@ kontext.Interface = function( app )
 
 
 /*
-javascript:(
-function(i){
-    i.style.position='fixed';
-    i.style.top='0%';
-    i.onload=function(p){
-        p=encodeURIComponent( prompt('postMessage','Hello,World!') );
-        i.contentWindow.postMessage(p,'http://ss-o.net');
-    };
-    i.src='http://ss-o.net/xjs/postMessage.html';
-    document.body.appendChild(i);
-}
-)(document.createElement('iframe'));
-*/
+ javascript:(
+ function(i){
+ i.style.position='fixed';
+ i.style.top='0%';
+ i.onload=function(p){
+ p=encodeURIComponent( prompt('postMessage','Hello,World!') );
+ i.contentWindow.postMessage(p,'http://ss-o.net');
+ };
+ i.src='http://ss-o.net/xjs/postMessage.html';
+ document.body.appendChild(i);
+ }
+ )(document.createElement('iframe'));
+ */
 function ShowProperty( aObj, aEndl )
 {
     var str = '',
-        props = [];
+    props = [];
     
     aEndl = ( aEndl ) ? aEndl : "\n";
     str += '<b>PROPERTIES</b>' + aEndl;
@@ -823,16 +819,16 @@ function ShowProperty( aObj, aEndl )
     return str;
 }
 
-// MARK: XML HTTP Request
+/* MARK: XML HTTP Request */
 kontext.Request = function()
 {
-    // internal use
+    /* internal use */
     var ctx = {},
         task = {},
         ntask = [],
         lock = false,
         sandbox = undefined,
-        // use for iframe
+        /* use for iframe */
         appendSandbox = function()
         {
             if( !sandbox )
@@ -855,14 +851,14 @@ kontext.Request = function()
         {
             var query = obj.query;
             
-            // cleanup form items
+            /* cleanup form items */
             kontext.elm.removeChilds( sandbox.form );
-            // configure
+            /* configure */
             sandbox.form.target = 'kontext.Request.' + obj.id;
             sandbox.form.enctype = ( obj.enctype ) ? obj.enctype : 'application/x-www-form-urlencoded';
             sandbox.form.method = obj.method;
             sandbox.form.action = obj.url;
-            // referrer
+            /* referrer */
             if( obj.ref )
             {
                 obj.ref = encodeURIComponent( document.location.href.split( '://', 2 )[0] + '://' + document.location.host );
@@ -873,7 +869,7 @@ kontext.Request = function()
                     sandbox.form.action += '?via=' + obj.ref;
                 }
             }
-            // append query
+            /* append query */
             for( var p in query ){
                 var input = document.createElement('input');
                 input.type = 'hidden';
@@ -881,7 +877,7 @@ kontext.Request = function()
                 input.value = query[p];
                 sandbox.form.appendChild(input);
             }
-            // submit
+            /* submit */
             sandbox.form.submit();
         },
         receiveMessage = function()
@@ -889,24 +885,24 @@ kontext.Request = function()
             console.log( 'receiveMessage' );
             console.log( arguments[1] );
             /*
-            if( obj.submit )
-            {
-                obj.document = ( this.contentDocument ) ? this.contentDocument : this.contentWindow;
-                
-                setTimeout( function(){
-                    var next = obj.delegate.apply( this, arguments );
-                    kontext.elm.remove( obj.inframe );
-                    invokeFinish( obj.id, next );
-                }, 4000 );
-            }
-            */
+             if( obj.submit )
+             {
+             obj.document = ( this.contentDocument ) ? this.contentDocument : this.contentWindow;
+             
+             setTimeout( function(){
+             var next = obj.delegate.apply( this, arguments );
+             kontext.elm.remove( obj.inframe );
+             invokeFinish( obj.id, next );
+             }, 4000 );
+             }
+             */
         },
         progress = function( evt, ctx )
         {
             console.log( 'progress' );
             console.log( this.location );
             console.log( ShowProperty( this ) );
-            // this.contentWindow.postMessage( 'hello world', '*' )
+            /* this.contentWindow.postMessage( 'hello world', '*' ) */
             window.postMessage( 'hello world', '*' );
         },
         readyForFrame = function( evt, ctx )
@@ -915,7 +911,7 @@ kontext.Request = function()
             
             console.log( 'readyForFrame' );
             this.readyState = 0;
-            // set charset to charset of destination
+            /* set charset to charset of destination */
             this.contentDocument.charset = 'UTF-8';
             this.contentDocument.open();
             this.contentDocument.write('<body></body>');
@@ -924,9 +920,9 @@ kontext.Request = function()
             kontext.ev.remove( obj.frame );
             if( obj.onReady.apply( this, [evt,obj] ) ){
                 console.log( 'submitViaSandbox' );
-                // add events
+                /* add events */
                 kontext.ev.add( obj.frame, 'readystatechange', progress, true, null, obj );
-                // kontext.ev.add( obj.frame, 'load', progress, true, null, obj );
+                /* kontext.ev.add( obj.frame, 'load', progress, true, null, obj ); */
                 kontext.ev.add( window, 'message', receiveMessage, true, null, obj );
                 submitViaSandbox( obj );
             }
@@ -937,16 +933,16 @@ kontext.Request = function()
         },
         invokeByFrame = function( obj )
         {
-            // setup frame
+            /* setup frame */
             obj.frame = document.createElement('iframe');
             obj.frame.id = obj.frame.name = 'kontext.Request.' + obj.id;
             obj.frame.src = 'about:blank';
             kontext.ev.add( obj.frame, 'load', readyForFrame, true, null, obj );
             kontext.ev.add( obj.frame, 'readystatechange', readyForFrame, true, null, obj );
-            // create by manual
+            /* create by manual */
             sandbox.div.appendChild( obj.frame );
         },
-        // use XMLHttpRequest
+        /* use XMLHttpRequest */
         readyForXHR = function()
         {
             var next = this.ctx.onReady.apply( this, arguments );
@@ -956,15 +952,15 @@ kontext.Request = function()
         },
         invokeByXHR = function( obj )
         {
-            var    url = obj.url + '?' + obj.id,
+            var url = obj.url + '?' + obj.id,
                 query = [];
             
-            // setup query
+            /* setup query */
             for( var p in obj.query ){
                 query.push( p + '=' + obj.query[p] );
             }
             
-            // create request object, set callback
+            /* create request object, set callback */
             obj.xhr = ( window.XMLHttpRequest ) ? new XMLHttpRequest : new ActiveXObject("Microsoft.XMLHTTP"),
             obj.xhr.ctx = obj;
             obj.xhr.onreadystatechange = readyForXHR;                
@@ -987,7 +983,7 @@ kontext.Request = function()
                 query = null;
             }
             
-            // add headers
+            /* add headers */
             for( var key in obj.header )
             {
                 var val = obj.header[key];
@@ -996,7 +992,7 @@ kontext.Request = function()
                     obj.xhr.setRequestHeader( key, val[i] );
                 }
             }
-            // obj.xhr.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
+            /* obj.xhr.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' ); */
             obj.xhr.send( query );
         },
         invokeFinish = function( id, next )
@@ -1012,7 +1008,7 @@ kontext.Request = function()
             if( !lock && ntask.length )
             {
                 var obj = ntask.shift();
-
+                
                 lock = true;
                 if( obj.useSandbox ){
                     invokeByFrame( obj );
@@ -1023,7 +1019,7 @@ kontext.Request = function()
             }
         };
     
-    // MARK: public methods
+    /* MARK: public methods */
     this.ntask = function(){
         return ntask.length + ( ( lock ) ? 1 : 0 );
     };
@@ -1038,14 +1034,14 @@ kontext.Request = function()
             header:{},
             query: {}
         };
-        // initialize by args
+        /* initialize by args */
         this.setMethod( id, method );
         this.setURL( id, url );
         this.setQuery( id, query );
         if( kontext.isObject( header ) )
         {
             for( var p in header ){
-                 this.setHeader( id, p, header[p] );
+                this.setHeader( id, p, header[p] );
             }
         }
         
@@ -1171,10 +1167,10 @@ kontext.Request = function()
 };
 
 /*
-    MARK: Geometry
-    Supported Google Maps version 3
-    (c) Copyright 2010 Masatoshi Teruya All rights reserved.
-*/
+ MARK: Geometry
+ Supported Google Maps version 3
+ (c) Copyright 2010 Masatoshi Teruya All rights reserved.
+ */
 kontext.Geo = {};
 kontext.Geo.Hash = function()
 {
@@ -1184,7 +1180,7 @@ kontext.Geo.Hash = function()
         BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz'.split(''),
         BASE32_CODE = {};
     
-    // setup
+    /* setup */
     for( var i = 0, len = BASE32.length; i < len; i++ ){
         BASE32_CODE[BASE32[i]] = i;
     }
@@ -1285,47 +1281,48 @@ kontext.Geo.Hash = function()
         
         calc();
     };
-
+    
 };
 
-// MARK: WGS84(1984)
-// 緯度 = latitude = y
-// 経度 = longitude = x
+/* MARK: WGS84(1984)
+    緯度 = latitude = y
+    経度 = longitude = x */
 kontext.Geo.WGS84 = function( opt )
 {
-        // 扁平率 = 298.257223563
+        /* 扁平率 = 298.257223563 */
     var _f = 1 / 298.257223563;
-        // 軌道長半径(m) = 6,378,137.0
+        /* 軌道長半径(m) = 6,378,137.0 */
         _major = 6378137.0,
-        // 軌道短半径(m) = 6,356,752.314245
+        /* 軌道短半径(m) = 6,356,752.314245 */
         _minor = 6356752.314245,
-        // 離心率(eccentricity) = ( ( 長半径 * 長半径 ) - ( 短半径 * 短半径 ) ) / ( 長半径 * 長半径 )
+        /* 離心率(eccentricity) = ( ( 長半径 * 長半径 ) - ( 短半径 * 短半径 ) ) / ( 長半径 * 長半径 ) */
         tmp = _major * _major;
-        _eccentricity = ( tmp - ( _minor * _minor ) ) / tmp;
-        _rad = Math.PI / 180;
-        _deg = 180 / Math.PI;
-        distWGS84 = 0;
-        trigWGS84 = null;
-        origin = {
-            // 緯度
-            lat: {
-                // degree
-                deg: 0,
-                // radian
-                rad: 0,
-                sin: 0,
-                cos: 0
-            },
-            // 経度
-            lng: {
-                // degree
-                deg: 0,
-                // radian
-                rad: 0,
-                sin: 0,
-                cos: 0
-            }
-        };
+    
+    _eccentricity = ( tmp - ( _minor * _minor ) ) / tmp;
+    _rad = Math.PI / 180;
+    _deg = 180 / Math.PI;
+    distWGS84 = 0;
+    trigWGS84 = null;
+    origin = {
+        /* 緯度 */
+        lat: {
+            /* degree */
+            deg: 0,
+            /* radian */
+            rad: 0,
+            sin: 0,
+            cos: 0
+        },
+        /* 経度 */
+        lng: {
+            /* degree */
+            deg: 0,
+            /* radian */
+            rad: 0,
+            sin: 0,
+            cos: 0
+        }
+    };
     
     this.setOrigin = function( lat, lng )
     {
@@ -1339,7 +1336,7 @@ kontext.Geo.WGS84 = function( opt )
         origin.lng.sin = Math.sin( origin.lng.rad );
         origin.lng.cos = Math.cos( origin.lng.rad );
     };
-    // aDistance = meter
+    /* aDistance = meter */
     this.setDistance = function( distance ){
         distWGS84 = distance / _major;
         trigWGS84 = { sin: Math.sin( distWGS84 ), cos: Math.cos( distWGS84 ) };
@@ -1355,27 +1352,27 @@ kontext.Geo.WGS84 = function( opt )
     this.deg2rad = function( lat, lng )
     {
         return {
-            lat: aLat * _rad,
-            lng: aLng * _rad
+        lat: aLat * _rad,
+        lng: aLng * _rad
         };
     };
     this.getDistance = function( latlng )
     {
         var dest = this.deg2rad( latlng.lat(), latlng.lng() ),
-            deg = origin.lat.sin * Math.sin( dest.lat ) + origin.lat.cos * Math.cos( dest.lat ) * Math.cos( dest.lng - origin.lng.rad ),
-            dist = _major * ( Math.atan( -deg / Math.sqrt( -deg * deg + 1 ) ) + Math.PI / 2 );
+        deg = origin.lat.sin * Math.sin( dest.lat ) + origin.lat.cos * Math.cos( dest.lat ) * Math.cos( dest.lng - origin.lng.rad ),
+        dist = _major * ( Math.atan( -deg / Math.sqrt( -deg * deg + 1 ) ) + Math.PI / 2 );
         
         return Math.round( dist );
     };
     /*
-        meridian = 子午線曲線率半径
-        primeVertical = 卯酉線半径
-        distance = f( latlng1, latlng2 )
-                = sqrt( pow( latDiff * meridian, 2 ) + pow( lngDiff * primeVertical * cos( ave ), 2 ) )
-        latDiff = lat1 - lat2 * degree;
-        lngDiff = lng1 - lng2 * degree;
-        ave = ( lat1 + lat2 ) * degree / 2;
-    */
+     meridian = 子午線曲線率半径
+     primeVertical = 卯酉線半径
+     distance = f( latlng1, latlng2 )
+     = sqrt( pow( latDiff * meridian, 2 ) + pow( lngDiff * primeVertical * cos( ave ), 2 ) )
+     latDiff = lat1 - lat2 * degree;
+     lngDiff = lng1 - lng2 * degree;
+     ave = ( lat1 + lat2 ) * degree / 2;
+     */
     this.getDistance2 = function( latlng )
     {
         var dest = this.deg2rad( latlng.lat(), latlng.lng() ),
@@ -1401,12 +1398,13 @@ kontext.Geo.Corder = function()
 {
     var corder = new google.maps.Geocoder();
     
-    // MARK: GeoCorder
+    /* MARK: GeoCorder */
     this.getByAddr = function( req, callback )
     {
         corder.geocode( req, function( res, rc )
         {
             var latlng = undefined;
+            
             switch( rc )
             {
                 case google.maps.GeocoderStatus.OK:
@@ -1415,24 +1413,19 @@ kontext.Geo.Corder = function()
                 case google.maps.GeocoderStatus.ERROR:
                     alert( 'There was a problem contacting the Google servers.' );
                 break;
-                
                 case google.maps.GeocoderStatus.INVALID_REQUEST:
                     alert( 'This GeocoderRequest was invalid.' );
                 break;
-
                 case google.maps.GeocoderStatus.OVER_QUERY_LIMIT:
                     alert( 'The webpage has gone over the requests limit in too short a period of time.' );
                 break;
-                
                 case google.maps.GeocoderStatus.REQUEST_DENIED:
                     alert( 'The webpage is not allowed to use the geocoder.' );
                 break;
-                
                 case google.maps.GeocoderStatus.UNKNOWN_ERROR:
                     alert( 'A geocoding request could not be processed due to a server error. The request may succeed if you try again.' );
                 break;
-                
-                // google.maps.GeocoderStatus.ZERO_RESULTS
+                /* google.maps.GeocoderStatus.ZERO_RESULTS */
                 default:
                     alert('不明な住所です。');
             }
@@ -1454,7 +1447,7 @@ kontext.Geo.Map = function( elm, opt, delegate )
         },
         map = undefined;
     
-    // getter/setter
+    /* getter/setter */
     this.__defineGetter__( 'self', function(){
         return map;
     });
@@ -1471,7 +1464,7 @@ kontext.Geo.Map = function( elm, opt, delegate )
         map.setZoom( zoom );
     });
     
-    // MARK: public method
+    /* MARK: public method */
     this.setEvent = function( evt, method )
     {
         google.maps.event.addDomListener( map, evt, function(){
@@ -1479,7 +1472,7 @@ kontext.Geo.Map = function( elm, opt, delegate )
         });
     };
     
-    // marge otion
+    /* marge otion */
     for( var p in opt ){
         defaultOpt[p] = opt[p];
     }
@@ -1489,7 +1482,7 @@ kontext.Geo.Map = function( elm, opt, delegate )
 kontext.Geo.Markers = function( map, delegate )
 {
     var serial = 0,
-        mkr = {};
+    mkr = {};
     
     this.add = function( opt ){
         serial++;
@@ -1534,7 +1527,7 @@ kontext.Geo.InfoWindow = function( opt )
 {
     var infoWindow = new google.maps.InfoWindow( opt );
     
-    // getter/setter
+    /* getter/setter */
     this.__defineGetter__( 'self', function(){
         return infoWindow;
     });
@@ -1571,13 +1564,13 @@ kontext.Geo.InfoWindow = function( opt )
     {
         if( once ){
             return google.maps.event.addDomListenerOnce( infoWindow, evt, function(){
-                delegate[method].apply( delegate, arguments );
-            });
+                        delegate[method].apply( delegate, arguments );
+                   });
         }
         
         return google.maps.event.addDomListener( infoWindow, evt, function(){
-            delegate[method].apply( delegate, arguments );
-        });
+                    delegate[method].apply( delegate, arguments );
+               });
     };
 };
 
@@ -1622,99 +1615,99 @@ kontext.Geo.Polygon = function( map )
         }
         
         this.add( { paths:paths } );
-        // map.fitBounds( new google.maps.LatLngBounds( paths.getAt( 0 ), paths.getAt( Math.ceil( paths.length / 2 ) ) ) );
+        /* map.fitBounds( new google.maps.LatLngBounds( paths.getAt( 0 ), paths.getAt( Math.ceil( paths.length / 2 ) ) ) ); */
     };
 };
 
 /*
-kontext.Geo.Direction = function()
-{
-    var direction = new google.maps.DirectionsService();
-
-    this.route = function( req, callback )
-    {
-        direction.route( req, function( res, rc )
-        {
-            switch( rc )
-            {
-                case google.maps.GeocoderStatus.OK:
-                    latlng = res[0].geometry.location;
-                break;
-                case google.maps.GeocoderStatus.ERROR:
-                    alert( 'There was a problem contacting the Google servers.' );
-                break;
-                
-                case google.maps.GeocoderStatus.INVALID_REQUEST:
-                    alert( 'This GeocoderRequest was invalid.' );
-                break;
-
-                case google.maps.GeocoderStatus.OVER_QUERY_LIMIT:
-                    alert( 'The webpage has gone over the requests limit in too short a period of time.' );
-                break;
-                
-                case google.maps.GeocoderStatus.REQUEST_DENIED:
-                    alert( 'The webpage is not allowed to use the geocoder.' );
-                break;
-                
-                case google.maps.GeocoderStatus.UNKNOWN_ERROR:
-                    alert( 'A geocoding request could not be processed due to a server error. The request may succeed if you try again.' );
-                break;
-                
-                // google.maps.GeocoderStatus.ZERO_RESULTS
-                default:
-                    alert('不明な住所です。');
-            }
-
-        });
-    }
-    this.SetDirection = function( aDirection, aGMap )
-    {
-        var direction = null;
-        if( aDirection )
-        {
-            var self = this;
-            
-            if( this.direction ){
-                delete this.direction;
-            }
-            direction = new GDirections( aGMap, aDirection );
-            GEvent.addListener( direction, 'error', function(){
-                self.Error( this );
-            } );
-        }
-        
-        return direction;
-    };
-    this.Error = function( aErr )
-    {
-        var gdir = this.direction;
-        
-        if (gdir.getStatus().code == G_GEO_UNKNOWN_ADDRESS){
-            alert("No corresponding geographic location could be found for one of the specified addresses. This may be due to the fact that the address is relatively new, or it may be incorrect.\nError code: " + gdir.getStatus().code);
-        }
-        else if (gdir.getStatus().code == G_GEO_SERVER_ERROR){
-            alert("A geocoding or directions request could not be successfully processed, yet the exact reason for the failure is not known.\n Error code: " + gdir.getStatus().code);
-        }
-        else if (gdir.getStatus().code == G_GEO_MISSING_QUERY){
-            alert("The HTTP q parameter was either missing or had no value. For geocoder requests, this means that an empty address was specified as input. For directions requests, this means that no query was specified in the input.\n Error code: " + gdir.getStatus().code);
-        }
-        else if (gdir.getStatus().code == G_GEO_BAD_KEY){
-            alert("The given key is either invalid or does not match the domain for which it was given. \n Error code: " + gdir.getStatus().code);
-        }
-        else if (gdir.getStatus().code == G_GEO_BAD_REQUEST){
-            alert("A directions request could not be successfully parsed.\n Error code: " + gdir.getStatus().code);
-        }
-        else{
-            alert("An unknown error occurred.\n" + ShowProperty( gdir.getStatus() ) );
-        }
-    };
-};
-*/
-
-
+ kontext.Geo.Direction = function()
+ {
+ var direction = new google.maps.DirectionsService();
+ 
+ this.route = function( req, callback )
+ {
+ direction.route( req, function( res, rc )
+ {
+ switch( rc )
+ {
+ case google.maps.GeocoderStatus.OK:
+ latlng = res[0].geometry.location;
+ break;
+ case google.maps.GeocoderStatus.ERROR:
+ alert( 'There was a problem contacting the Google servers.' );
+ break;
+ 
+ case google.maps.GeocoderStatus.INVALID_REQUEST:
+ alert( 'This GeocoderRequest was invalid.' );
+ break;
+ 
+ case google.maps.GeocoderStatus.OVER_QUERY_LIMIT:
+ alert( 'The webpage has gone over the requests limit in too short a period of time.' );
+ break;
+ 
+ case google.maps.GeocoderStatus.REQUEST_DENIED:
+ alert( 'The webpage is not allowed to use the geocoder.' );
+ break;
+ 
+ case google.maps.GeocoderStatus.UNKNOWN_ERROR:
+ alert( 'A geocoding request could not be processed due to a server error. The request may succeed if you try again.' );
+ break;
+ 
+ // google.maps.GeocoderStatus.ZERO_RESULTS
+ default:
+ alert('不明な住所です。');
+ }
+ 
+ });
+ }
+ this.SetDirection = function( aDirection, aGMap )
+ {
+ var direction = null;
+ if( aDirection )
+ {
+ var self = this;
+ 
+ if( this.direction ){
+ delete this.direction;
+ }
+ direction = new GDirections( aGMap, aDirection );
+ GEvent.addListener( direction, 'error', function(){
+ self.Error( this );
+ } );
+ }
+ 
+ return direction;
+ };
+ this.Error = function( aErr )
+ {
+ var gdir = this.direction;
+ 
+ if (gdir.getStatus().code == G_GEO_UNKNOWN_ADDRESS){
+ alert("No corresponding geographic location could be found for one of the specified addresses. This may be due to the fact that the address is relatively new, or it may be incorrect.\nError code: " + gdir.getStatus().code);
+ }
+ else if (gdir.getStatus().code == G_GEO_SERVER_ERROR){
+ alert("A geocoding or directions request could not be successfully processed, yet the exact reason for the failure is not known.\n Error code: " + gdir.getStatus().code);
+ }
+ else if (gdir.getStatus().code == G_GEO_MISSING_QUERY){
+ alert("The HTTP q parameter was either missing or had no value. For geocoder requests, this means that an empty address was specified as input. For directions requests, this means that no query was specified in the input.\n Error code: " + gdir.getStatus().code);
+ }
+ else if (gdir.getStatus().code == G_GEO_BAD_KEY){
+ alert("The given key is either invalid or does not match the domain for which it was given. \n Error code: " + gdir.getStatus().code);
+ }
+ else if (gdir.getStatus().code == G_GEO_BAD_REQUEST){
+ alert("A directions request could not be successfully parsed.\n Error code: " + gdir.getStatus().code);
+ }
+ else{
+ alert("An unknown error occurred.\n" + ShowProperty( gdir.getStatus() ) );
+ }
+ };
+ };
+ */
 
 
-// MARK: Type Checker
+
+
+/* MARK: Type Checker */
 kontext.isClassOf = function( arg, className ){
     return ( arg && arg.constructor === className );
 };
@@ -1754,31 +1747,31 @@ kontext.isNodeText = function( arg ){
 
 
 
-// !!!: still working
+/* !!!: still working */
 
-// MARK: QuadTree
+/* MARK: QuadTree */
 kontext.QuadTree = {};
 kontext.QuadTree.Tree = function()
 {
-        // default depth size = 8
+        /* default depth size = 8 */
     var maxDepth = 9,
-        // spatial nodes hash index
+        /* spatial nodes hash index */
         nodes = {},
-        // number of node index
+        /* number of node index */
         depth_of_nodes = undefined,
         bounds = {
-            // depth
+            /* depth */
             depth:0,
-            // max node size
+            /* max node size */
             maxNodeSize:0,
-            // origin pt(left,top)
+            /* origin pt(left,top) */
             x:0, y:0,
-            // max size
+            /* max size */
             w:0, h:0,
-            // min size
+            /* min size */
             mw:0, mh:0
         },
-        // init total number of cell each depth
+        /* init total number of cell each depth */
         initNodeSize = function( depth )
         {
             if( kontext.isNumber( depth ) ){
@@ -1804,33 +1797,33 @@ kontext.QuadTree.Tree = function()
             v = ( n | ( n << 2 ) ) & 0x33333333;
             return ( n | ( n << 1 ) ) & 0x55555555;
         },
-        // 射影変換 -> ビット分割 -> モートン空間番号
+        /* 射影変換 -> ビット分割 -> モートン空間番号 */
         getMortonNumber = function( x, y )
         {
             var bitX = bitSeparate( ( x - bounds.x ) / bounds.mw ),
-                bitY = bitSeparate( ( y - bounds.y ) / bounds.mh );
+            bitY = bitSeparate( ( y - bounds.y ) / bounds.mh );
             
             return ( bitX | ( bitY << 1 ) );
         },
         getNodeIdxAt = function( x, y, width, height )
         {
-            // index number of node
+            /* index number of node */
             var idx = 0xffffffff;
             
             if( width >= 0 && height >= 0 )
             {
-                // get morton number left:top and right:bottom
+                /* get morton number left:top and right:bottom */
                 var lt = getMortonNumber( x, y ),
                     rb = getMortonNumber( x + width, y + height );
                 
                 if( lt < bounds.maxNodeSize && rb < bounds.maxNodeSize )
                 {
-                        // spatial section
+                        /* spatial section */
                     var sec = rb ^ lt,
-                        // spatial division
+                        /* spatial division */
                         nshift = 0;
                     
-                    // find node index number
+                    /* find node index number */
                     for( var i = 0; i < bounds.depth; i++ )
                     {
                         if( ( ( sec >> ( i * 2 ) ) & 0x3 ) !== 0 ){
@@ -1855,7 +1848,7 @@ kontext.QuadTree.Tree = function()
             return ( idx < bounds.maxNodeSize ) ? nodes[''+idx] : undefined;
         };
     
-    // set node depth
+    /* set node depth */
     this.setDepth = function( depth )
     {
         if( depth < 1 && depth > maxDepth ){
@@ -1868,7 +1861,7 @@ kontext.QuadTree.Tree = function()
         }
         return false;
     };
-    // set bounds
+    /* set bounds */
     this.setBounds = function( x, y, width, height )
     {
         if( width < 1 && height < 1 ){
@@ -1890,16 +1883,16 @@ kontext.QuadTree.Tree = function()
         var node = getNodeAt( x, y, width, height );
         return ( node ) ? node.getLastLeaf() : undefined;
     };
-    // attach leaf
+    /* attach leaf */
     this.attach = function( leaf )
     {
         var idx = 0;
         console.log( 'attach: ' + leaf.x() + ':' + leaf.y() + ':' + leaf.width() + ':' + leaf.height() );
         if( ( idx = getNodeIdxAt( leaf.x(), leaf.y(), leaf.width(), leaf.height() ) ) < bounds.maxNodeSize )
         {
-            // create hash key
+            /* create hash key */
             var key = '' + idx;
-            // create node if undefined
+            /* create node if undefined */
             if( nodes[key] || ( nodes[key] = new kontext.QuadTree.Node( this, idx ) ) ){
                 return nodes[key].attach( leaf );
             }
@@ -1907,7 +1900,7 @@ kontext.QuadTree.Tree = function()
         
         return false;
     };
-    // intialize depth of node size
+    /* intialize depth of node size */
     initNodeSize.apply( this, arguments );
 };
 
@@ -1915,7 +1908,7 @@ kontext.QuadTree.isTree = function( tree ){
     return ( tree && tree.constructor === kontext.QuadTree.Tree );
 };
 
-// MARK: QuadTree.Node
+/* MARK: QuadTree.Node */
 kontext.QuadTree.Node = function()
 {
     var tree = arguments[0],
@@ -1950,7 +1943,7 @@ kontext.QuadTree.Node = function()
         }
         return false;
     };
-    // call from leaf
+    /* call from leaf */
     this.onDetach = function( leaf )
     {
         if( leaf === lastLeaf && leaf.prev ){
@@ -1958,7 +1951,7 @@ kontext.QuadTree.Node = function()
         }
     };
     
-    // check tree and node number
+    /* check tree and node number */
     if( ( !tree || tree.constructor !== kontext.QuadTree.Tree ) ||
         ( idx && !kontext.isNumber( idx ) ) ){
         console.log( 'invalid arguments' );
@@ -1971,27 +1964,27 @@ kontext.QuadTree.isNode = function( node ){
     return ( node && node.constructor === kontext.QuadTree.Node );
 };
 
-// MARK: QuadTree.Leaf
+/* MARK: QuadTree.Leaf */
 kontext.QuadTree.Leaf = function()
 {
-    // public: properties
-    // node
+    /* public: properties */
+    /* node */
     this.node = undefined;
-    // prev leaf
+    /* prev leaf */
     this.prev = undefined;
-    // next leaf
+    /* next leaf */
     this.next = undefined;
     
-    // private: properties and methods
+    /* private: properties and methods */
     var obj = {
             x:arguments[0],
             y:arguments[1],
             width:arguments[2],
             height:arguments[3],
-            // user data
+            /* user data */
             data:arguments[4]
         },
-        // update self position
+        /* update self position */
         retouch = function()
         {
             if( this.node )
@@ -2004,7 +1997,7 @@ kontext.QuadTree.Leaf = function()
             }
         };
     
-    // public: methods
+    /* public: methods */
     this.detach = function()
     {
         if( this.node )
@@ -2023,7 +2016,7 @@ kontext.QuadTree.Leaf = function()
         }
         return false;
     };
-    // add getter
+    /* add getter */
     this.x = function(){
         return obj.x;
     };
@@ -2061,13 +2054,13 @@ kontext.QuadTree.Leaf = function()
         retouch.apply( this );
     };
 };
-// check leaf type
+/* check leaf type */
 kontext.QuadTree.isLeaf = function( leaf ){
     return ( leaf && leaf.constructor === kontext.QuadTree.Leaf );
 };
 
 
-// MARK: Head Up Display Panel
+/* MARK: Head Up Display Panel */
 kontext.HUD = function()
 {
     var palette = document.createElement('div'),
@@ -2090,7 +2083,7 @@ kontext.HUD = function()
     }
     this.body.appendChild( palette );
     
-    // MARK: methods
+    /* MARK: methods */
     this.show = function(){
         palette.style.display = 'block';
     };
@@ -2100,28 +2093,28 @@ kontext.HUD = function()
     this.contents = function( contents ){
         palette.innerHTML = contents;
     };
-    // MARK: delegate
-    // mouseselect
+    /* MARK: delegate */
+    /* mouseselect */
     this.mouseSelect = function( evt ){
         return kontext.ev.stop( evt );
     };
-    // mouseclick
+    /* mouseclick */
     this.mouseClick = function( evt ){
         return kontext.ev.stop( evt );
     };
-    // mouseup
+    /* mouseup */
     this.mouseUp = function( evt ){
         return kontext.ev.stop( evt );
     };
-    // mouseover
+    /* mouseover */
     this.mouseOver = function( evt ){
         return kontext.ev.stop( evt );
     };
-    // mouseout
+    /* mouseout */
     this.mouseOut = function( evt ){
         return kontext.ev.stop( evt );
     };
-    // mousedown
+    /* mousedown */
     this.mouseDown = function( evt )
     {
         if( palette === evt.target ){
@@ -2129,11 +2122,11 @@ kontext.HUD = function()
         }
         return kontext.ev.stop( evt );
     };
-    // drag progress
+    /* drag progress */
     this.dragProgress = function( evt, elm, point ){
         return true;
     };
-    // drag end
+    /* drag end */
     this.dragEnd = function( evt, elm ){
         console.log( 'drag end' );
     };
@@ -2141,7 +2134,7 @@ kontext.HUD = function()
 };
 
 
-// MARK: DragDrop
+/* MARK: DragDrop */
 kontext.DragDrop = function( delegate, target, useCapture )
 {
     this.ondrag = false;
@@ -2150,98 +2143,98 @@ kontext.DragDrop = function( delegate, target, useCapture )
     this.mousePt = {};
     this.delegate = delegate;
     
-    // internal use
-        // delegate selectStart -> mouseSelect
+    /* internal use */
+    /* delegate selectStart -> mouseSelect */
     var evSelectStart = function( evt )
+    {
+        if( this.delegate.mouseSelect ){
+            return this.delegate.mouseSelect.apply( this.delegate, arguments );
+        }
+        return kontext.ev.stop( evt );
+    },
+    /* delegate mouseClick */
+    evMouseClick = function( evt )
+    {
+        if( this.delegate.mouseClick ){
+            return this.delegate.mouseClick.apply( this.delegate, arguments );
+        }
+        return kontext.ev.stop( evt );
+    },
+    /* delegate mouseOver */
+    evMouseOver = function( evt )
+    {
+        if( !this.ondrag && this.delegate.mouseOver ){
+            return this.delegate.mouseOver.apply( this.delegate, arguments );
+        }
+        return kontext.ev.stop( evt );
+    },
+    /* delegate mouseOut */
+    evMouseOut = function( evt )
+    {
+        if( !this.ondrag && this.delegate.mouseOut ){
+            return this.delegate.mouseOut.apply( this.delegate, arguments );
+        }
+        return kontext.ev.stop( evt );
+    },
+    /* delegate mouseDown */
+    evMouseDown = function( evt )
+    {
+        if( this.delegate.mouseDown ){
+            return this.delegate.mouseDown.apply( this.delegate, arguments );
+        }
+        return kontext.ev.stop( evt );
+    },
+    /* delegate mouseMove/drag */
+    evMouseMove = function( evt )
+    {
+        if( this.ondrag )
         {
-            if( this.delegate.mouseSelect ){
-                return this.delegate.mouseSelect.apply( this.delegate, arguments );
+            /* new position */
+            var point = {
+                    x: this.dragRect.xt - ( this.mousePt.x - evt.pageX ),
+                    y: this.dragRect.yt - ( this.mousePt.y - evt.pageY )
+                };
+            
+            /* set element position if delegate return true */
+            if( this.delegate.dragProgress( evt, this.drag, point ) ){
+                this.drag.style.left = point.x + 'px';
+                this.drag.style.top = point.y + 'px';
             }
-            return kontext.ev.stop( evt );
-        },
-        // delegate mouseClick
-        evMouseClick = function( evt )
+        }
+        else if( this.delegate.mouseMove ){
+            return this.delegate.mouseMove.apply( this.delegate, arguments );
+        }
+        return kontext.ev.stop( evt );
+    },
+    /* delegate mouseUp/dragEnd */
+    evMouseUp = function( evt )
+    {
+        if( this.ondrag )
         {
-            if( this.delegate.mouseClick ){
-                return this.delegate.mouseClick.apply( this.delegate, arguments );
+            this.ondrag = false;
+            if( this.delegate.dragEnd ){
+                this.delegate.dragEnd( arguments[0], this.drag );
             }
-            return kontext.ev.stop( evt );
-        },
-        // delegate mouseOver
-        evMouseOver = function( evt )
-        {
-            if( !this.ondrag && this.delegate.mouseOver ){
-                return this.delegate.mouseOver.apply( this.delegate, arguments );
-            }
-            return kontext.ev.stop( evt );
-        },
-        // delegate mouseOut
-        evMouseOut = function( evt )
-        {
-            if( !this.ondrag && this.delegate.mouseOut ){
-                return this.delegate.mouseOut.apply( this.delegate, arguments );
-            }
-            return kontext.ev.stop( evt );
-        },
-        // delegate mouseDown
-        evMouseDown = function( evt )
-        {
-            if( this.delegate.mouseDown ){
-                return this.delegate.mouseDown.apply( this.delegate, arguments );
-            }
-            return kontext.ev.stop( evt );
-        },
-        // delegate mouseMove/drag
-        evMouseMove = function( evt )
-        {
-            if( this.ondrag )
-            {
-                // new position
-                var point = {
-                        x: this.dragRect.xt - ( this.mousePt.x - evt.pageX ),
-                        y: this.dragRect.yt - ( this.mousePt.y - evt.pageY )
-                    };
-                
-                // set element position if delegate return true
-                if( this.delegate.dragProgress( evt, this.drag, point ) ){
-                    this.drag.style.left = point.x + 'px';
-                    this.drag.style.top = point.y + 'px';
-                }
-            }
-            else if( this.delegate.mouseMove ){
-                return this.delegate.mouseMove.apply( this.delegate, arguments );
-            }
-            return kontext.ev.stop( evt );
-        },
-        // delegate mouseUp/dragEnd
-        evMouseUp = function( evt )
-        {
-            if( this.ondrag )
-            {
-                this.ondrag = false;
-                if( this.delegate.dragEnd ){
-                    this.delegate.dragEnd( arguments[0], this.drag );
-                }
-                return kontext.ev.stop( arguments[0] );
-            }
-            else if( this.delegate.mouseUp ){
-                return this.delegate.mouseUp.apply( this.delegate, arguments );
-            }
-            return kontext.ev.stop( evt );
-        };
+            return kontext.ev.stop( arguments[0] );
+        }
+        else if( this.delegate.mouseUp ){
+            return this.delegate.mouseUp.apply( this.delegate, arguments );
+        }
+        return kontext.ev.stop( evt );
+    };
     
-    // MARK: events
-    // drag
+    /* MARK: events */
+    /* drag */
     this.dragStart = function( evt, elm, padding )
     {
-        // set dragger properties
+        /* set dragger properties */
         this.ondrag = true;
         this.dragRect = kontext.elm.getRect( elm, padding );
         this.mousePt = { x:evt.pageX, y:evt.pageY };
         this.drag = elm;
     };
     
-    // add event
+    /* add event */
     kontext.ev.add( target, 'selectstart', evSelectStart, useCapture, this );
     kontext.ev.add( target, 'click', evMouseClick, useCapture, this );
     kontext.ev.add( target, 'mouseover', evMouseOver, useCapture, this );
@@ -2251,7 +2244,7 @@ kontext.DragDrop = function( delegate, target, useCapture )
     kontext.ev.add( document, 'mouseup', evMouseUp, true, this );
 };
 
-// MARK: Selection
+/* MARK: Selection */
 kontext.Selection = function()
 {
     var owner = undefined,
@@ -2331,10 +2324,10 @@ kontext.Selection = function()
                 lastRange = document.createRange(),
                 nodeRange = document.createRange();
             
-            // lastRange.selectNode( last );
+            /* lastRange.selectNode( last ); */
             nodeRange.selectNode( current );
             console.log( nodeRange );
-            // console.log( lastRange );
+            /* console.log( lastRange ); */
             
             if( current === last ){
                 current = undefined;
@@ -2343,7 +2336,7 @@ kontext.Selection = function()
             else
             {
                 node = current;
-            
+                
                 while( node )
                 {
                     if( node.hasChildNodes() ){
@@ -2380,7 +2373,7 @@ kontext.Selection = function()
     };
     this.setStart = function(){
         console.log( sel );
-//        range.setStart( owner, 0 );
+        /* range.setStart( owner, 0 ); */
     };
     this.collapse = function( bool )
     {
@@ -2437,7 +2430,7 @@ kontext.Selection = function()
                     var pageBlock = ( this.commonAncestorContainer() === owner ),
                         elms = extr.childNodes,
                         ins = undefined;
-                    
+            
                     // frag = extr.cloneNode( true ),
                     // kontext.elm.removeChilds( frag );
                     for( var i = 0, len = elms.length; i < len; i++ )
@@ -2453,13 +2446,13 @@ kontext.Selection = function()
                         }
                         frag.appendChild( ins );
                         */
-            /*        }
+            /*       }
                     console.log( extr );
                     // target.sel.replaceNode( frag );
                     // target.sel.insertNode( frag );
-                }
-            }
-            */
+                 }
+             }
+             */
         }
     };
     this.replaceNode = function( node )
